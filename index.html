@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Last War VS League Scheduler</title>
+<style>
+:root{
+  --bg:#0b0f14;--panel:#121923;--panel2:#182231;--text:#eef3f8;--muted:#9fb0c3;
+  --line:#263445;--green:#32d583;--yellow:#fdb022;--red:#f97066;--blue:#53b1fd;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.wrap{max-width:1120px;margin:auto;padding:22px}
+h1{font-size:28px;margin:0 0 4px} h2{font-size:20px;margin:28px 0 12px} h3{font-size:16px;margin:0 0 8px}
+.sub{color:var(--muted);margin-bottom:18px}
+.grid{display:grid;gap:12px}.g4{grid-template-columns:repeat(4,1fr)}.g2{grid-template-columns:repeat(2,1fr)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:15px}
+.big{font-size:24px;font-weight:800}.muted{color:var(--muted)} .small{font-size:12px}
+.badge{display:inline-block;padding:3px 8px;border-radius:999px;font-size:12px;font-weight:800}
+.push{background:#153b2b;color:#78efb1}.save{background:#3a3015;color:#ffd36a}
+.normal{background:#16344a;color:#8ed2ff}.danger{background:#4a2020;color:#ff9a94}
+label{display:block;color:var(--muted);font-size:12px;margin:8px 0 4px}
+input,select{width:100%;background:#0e151e;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:9px}
+button{background:#1f6feb;color:white;border:0;border-radius:8px;padding:9px 12px;font-weight:700;cursor:pointer}
+table{width:100%;border-collapse:collapse}th,td{padding:9px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{color:var(--muted);font-size:12px}
+.week{display:grid;grid-template-columns:110px 95px 1fr 1fr;gap:10px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)}
+.daygrid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+.day{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px;min-height:135px}
+.day strong{display:block}.vp{float:right;color:var(--blue)}
+.callout{border-left:4px solid var(--blue);padding:12px 14px;background:#101a25;border-radius:8px}
+.warn{border-left-color:var(--yellow)}
+.kpi{font-size:13px;color:var(--muted)}.kpi b{display:block;color:var(--text);font-size:20px}
+.rule{padding:10px 0;border-bottom:1px solid var(--line)}
+footer{margin:28px 0 8px;color:var(--muted);font-size:12px}
+@media(max-width:800px){
+ .g4,.g2{grid-template-columns:1fr 1fr}.week{grid-template-columns:1fr 1fr}.daygrid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:520px){
+ .wrap{padding:14px}.g4,.g2{grid-template-columns:1fr}.daygrid{grid-template-columns:1fr}.week{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>VS League Scheduler</h1>
+<div class="sub">Last War: Survival · 4-week Duel League logic + 7-week rolling resource plan</div>
+
+<div class="grid g4">
+  <div class="card"><div class="muted">Current League</div><div class="big">GOLD</div></div>
+  <div class="card"><div class="muted">Current Week</div><div class="big">3 / 4</div></div>
+  <div class="card"><div class="muted">Current Record</div><div class="big">2–0</div></div>
+  <div class="card"><div class="muted">Current Call</div><div class="big"><span class="badge push">PUSH</span></div></div>
+</div>
+
+<h2>Final strategy</h2>
+<div class="callout">
+<b>Official Duel League ranking is evaluated in 4-week blocks.</b> The 7-week view below is our alliance planning horizon, not a separate game season.
+The alliance saves by default, scouts every opponent, and spends hard only when the matchup gives a realistic chance to convert resources into a weekly win.
+</div>
+
+<div class="grid g2" style="margin-top:12px">
+  <div class="card">
+    <h3>Diamond objectives</h3>
+    <div class="rule"><b>Minimum objective:</b> avoid a 0–4 season.</div>
+    <div class="rule"><b>Preferred objective:</b> 2 wins in each 4-week block.</div>
+    <div class="rule"><b>Rolling resource target:</b> find roughly 3 favorable win opportunities across 7 planned weeks.</div>
+    <div class="rule"><b>After 2 wins:</b> hard save unless the visible league cutoff says more is required.</div>
+  </div>
+  <div class="card">
+    <h3>Alliance spending rule</h3>
+    <div class="rule"><b>Favorable opponent:</b> push.</div>
+    <div class="rule"><b>Even opponent:</b> push only when the season record creates pressure.</div>
+    <div class="rule"><b>Unfavorable opponent:</b> save unless the season is at must-win status.</div>
+    <div class="rule"><b>Actual promotion/demotion cutoff:</b> always overrides the default strategy.</div>
+  </div>
+</div>
+
+<h2>Strategy calculator</h2>
+<div class="grid g4">
+  <div class="card">
+    <label>League</label>
+    <select id="league">
+      <option>Gold</option>
+      <option>Diamond</option>
+    </select>
+  </div>
+  <div class="card">
+    <label>League week</label>
+    <select id="week">
+      <option>1</option><option>2</option><option selected>3</option><option>4</option>
+    </select>
+  </div>
+  <div class="card">
+    <label>Results before this week</label>
+    <input id="record" value="WW" maxlength="3">
+    <label>Opponent</label>
+    <select id="matchup">
+      <option value="favorable">Favorable</option>
+      <option value="even" selected>Even</option>
+      <option value="unfavorable">Unfavorable</option>
+    </select>
+  </div>
+  <div class="card">
+    <label>Promotion slots shown in-game</label>
+    <input id="promote" type="number" min="1" max="8" value="1">
+    <label>Diamond demotion slots shown in-game</label>
+    <input id="demote" type="number" min="1" max="8" value="5">
+  </div>
+</div>
+<div style="margin-top:10px"><button onclick="recalc()">Recalculate</button></div>
+<div class="card" style="margin-top:12px" id="calc"></div>
+
+<h2>7-week rolling plan</h2>
+<div class="card" id="horizon"></div>
+
+<h2>Score budget</h2>
+<div class="grid g4">
+  <div class="card"><label>Active scorers</label><input id="members" type="number" value="80" min="1" max="100" oninput="scoreCalc()"></div>
+  <div class="card"><label>Save-week daily cap / player</label><input id="cap" type="number" value="7.2" step=".1" oninput="scoreCalc()"><span class="small muted">millions</span></div>
+  <div class="card"><label>Opponent projected week score</label><input id="opp" type="number" value="5.0" step=".1" oninput="scoreCalc()"><span class="small muted">billions</span></div>
+  <div class="card"><label>Push safety margin</label><input id="margin" type="number" value="10" step="1" oninput="scoreCalc()"><span class="small muted">percent</span></div>
+</div>
+<div class="grid g4" style="margin-top:12px">
+  <div class="card kpi"><b id="dailyfloor">576M</b>Alliance save-day ceiling</div>
+  <div class="card kpi"><b id="weekfloor">3.46B</b>6-day save pace</div>
+  <div class="card kpi"><b id="pushtarget">5.50B</b>Opponent + safety margin</div>
+  <div class="card kpi"><b>7 VP</b>Minimum weekly VP needed</div>
+</div>
+
+<h2>Daily VS value</h2>
+<div class="daygrid">
+ <div class="day"><strong>Mon <span class="vp">1 VP</span></strong><span class="badge normal">Radar</span><p class="small">Radar tasks, stamina/energy, gathering, drone-related scoring. Keep premium stock banked if the week is a save.</p></div>
+ <div class="day"><strong>Tue <span class="vp">2 VP</span></strong><span class="badge normal">Build</span><p class="small">Construction speedups, completed buildings, trucks and survivors. High-value day if pushing.</p></div>
+ <div class="day"><strong>Wed <span class="vp">2 VP</span></strong><span class="badge normal">Science</span><p class="small">Research speedups, Valor Badges and related tech scoring. Avoid unnecessary completion on save weeks.</p></div>
+ <div class="day"><strong>Thu <span class="vp">2 VP</span></strong><span class="badge push">Heroes</span><p class="small">Hero shards, EXP, skill medals, recruitment and exclusive-weapon progress. Usually one of the strongest push days.</p></div>
+ <div class="day"><strong>Fri <span class="vp">2 VP</span></strong><span class="badge push">Mobilize</span><p class="small">Troop training, promotions and speedups. Spend only what the weekly VP situation requires.</p></div>
+ <div class="day"><strong>Sat <span class="vp">4 VP</span></strong><span class="badge danger">Buster</span><p class="small">The largest single daily VP value. Do not rely on Saturday to rescue a week if enough earlier VP are already gone.</p></div>
+</div>
+
+<h2>4-week ranking paths</h2>
+<div class="card">
+<table>
+<thead><tr><th>Rank</th><th>Path</th><th>Wins</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>WWWW</td><td>4</td></tr>
+<tr><td>2</td><td>WWWL</td><td>3</td></tr>
+<tr><td>3–5</td><td>WWLW / WLWW / LWWW</td><td>3</td></tr>
+<tr><td>6–11</td><td>WWLL / WLWL / WLLW / LWWL / LWLW / LLWW</td><td>2</td></tr>
+<tr><td>12–15</td><td>WLLL / LWLL / LLWL / LLLW</td><td>1</td></tr>
+<tr><td>16</td><td>LLLL</td><td>0</td></tr>
+</tbody>
+</table>
+<p class="small muted">Earlier wins rank higher when total wins are tied. The planner therefore values an early inexpensive win more than a late recovery win.</p>
+</div>
+
+<h2>Decision rules used by the app</h2>
+<div class="card">
+<div class="rule"><b>Gold:</b> keep pushing while a promotion path remains possible. If a loss removes every path inside the configured promotion cutoff, save for the next cycle.</div>
+<div class="rule"><b>Diamond with 2 wins:</b> hard save unless the actual cutoff still creates danger.</div>
+<div class="rule"><b>Diamond with 1 win:</b> save against bad matchups; push a favorable matchup for the preferred second win.</div>
+<div class="rule"><b>Diamond with 0 wins entering Week 3:</b> pressure rises sharply; push any realistic matchup.</div>
+<div class="rule"><b>Diamond with 0 wins entering Week 4:</b> must push. A 0–4 season is the outcome the plan is specifically designed to avoid.</div>
+<div class="rule"><b>Visible league cutoff:</b> if the calculated promotion/demotion line shows that one win is insufficient, the app escalates to a second required win.</div>
+</div>
+
+<footer>Static alliance planning tool. Browser changes are local to each device until shared officer controls are added.</footer>
+</div>
+
+<script>
+const rankMap = {
+ "WWWW":1,"WWWL":2,"WWLW":3,"WLWW":4,"LWWW":5,
+ "WWLL":6,"WLWL":7,"WLLW":8,"LWWL":9,"LWLW":10,"LLWW":11,
+ "WLLL":12,"LWLL":13,"LLWL":14,"LLLW":15,"LLLL":16
+};
+
+function completions(prefix){
+  const remain=4-prefix.length, out=[];
+  for(let i=0;i<(1<<remain);i++){
+    let s=prefix;
+    for(let j=0;j<remain;j++) s += (i&(1<<j)) ? "W":"L";
+    out.push({path:s,rank:rankMap[s],wins:(s.match(/W/g)||[]).length});
+  }
+  return out;
+}
+
+function goldRec(prefix,promote,matchup){
+  const all=completions(prefix);
+  const cutoff=Math.max(1,Math.min(15,promote||1));
+  const any=all.some(x=>x.rank<=cutoff);
+  const lossStillPossible=Object.keys(rankMap).some(p=>p.startsWith(prefix+"L") && rankMap[p]<=cutoff);
+
+  if(!any) return {cls:"save",label:"SAVE / RESET",text:"No remaining W/L path reaches the configured promotion cutoff. Preserve resources for the next league cycle."};
+  if(!lossStillPossible) return {cls:"push",label:"MUST PUSH",text:"A loss this week eliminates every remaining promotion path. This is a required push week."};
+  if(matchup==="unfavorable") return {cls:"normal",label:"SCOUT HARD",text:"Promotion remains possible, but this opponent looks expensive. Compare the cost of this matchup with the remaining weeks before committing."};
+  return {cls:"push",label:"PUSH",text:"Promotion remains live and the matchup is usable. Earlier wins improve final ranking, so convert this opportunity."};
+}
+
+function diamondRec(prefix,demote,matchup,week){
+  const wins=(prefix.match(/W/g)||[]).length;
+  const all=completions(prefix);
+  const safeRank=16-Math.max(1,Math.min(8,demote||5));
+  const safeAll=all.every(x=>x.rank<=safeRank);
+  const safeAny=all.some(x=>x.rank<=safeRank);
+  const lossSafe=Object.keys(rankMap).some(p=>p.startsWith(prefix+"L") && rankMap[p]<=safeRank);
+
+  if(safeAll) return {cls:"save",label:"HARD SAVE",text:"Every remaining result path stays above the configured demotion line. Bank resources."};
+  if(!safeAny) return {cls:"danger",label:"RELEGATION RISK",text:"No remaining result path clears the configured safety line. Check the in-game cutoff and conserve only if survival is already impossible."};
+
+  if(wins>=2){
+    return {cls:"save",label:"SAVE",text:"Two wins are secured. This is the preferred Diamond objective; spend only if the actual cutoff still shows danger."};
+  }
+
+  if(wins===1){
+    if(!lossSafe && week>=4) return {cls:"push",label:"MUST PUSH",text:"The configured cutoff says one win is not enough and this is the final week. Push for the second win."};
+    if(matchup==="favorable") return {cls:"push",label:"PUSH IF CHEAP",text:"Minimum objective is already achieved. This favorable matchup is the best chance to secure the preferred second win."};
+    if(matchup==="even") return {cls:"normal",label:"SAVE / WATCH",text:"One win is banked. Save unless standings show that a second win is required or the matchup becomes clearly favorable."};
+    return {cls:"save",label:"SAVE",text:"One win is banked and the matchup is poor. Preserve resources and wait for a better opportunity unless the cutoff makes this a must-win."};
+  }
+
+  // zero wins
+  if(week>=4) return {cls:"danger",label:"ALL-IN PUSH",text:"No wins entering the final week. Avoiding a 0–4 season is now the priority."};
+  if(week>=3){
+    if(matchup==="unfavorable") return {cls:"danger",label:"PUSH IF POSSIBLE",text:"No wins entering Week 3 and the opponent is unfavorable. The season is now under pressure; push if there is any realistic route to victory."};
+    return {cls:"push",label:"MUST PUSH",text:"No wins entering Week 3. Convert this matchup if at all possible."};
+  }
+  if(matchup==="favorable") return {cls:"push",label:"PUSH",text:"This is the type of early matchup the save/spend strategy is designed to exploit."};
+  return {cls:"save",label:"SAVE / SCOUT",text:"No immediate pressure yet. Save resources and look for the cheapest realistic win opportunity."};
+}
+
+function recalc(){
+  const league=document.getElementById('league').value;
+  const week=+document.getElementById('week').value;
+  let record=document.getElementById('record').value.toUpperCase().replace(/[^WL]/g,'').slice(0,week-1);
+  document.getElementById('record').value=record;
+  const matchup=document.getElementById('matchup').value;
+  const promote=+document.getElementById('promote').value||1;
+  const demote=+document.getElementById('demote').value||5;
+
+  const r=league==="Gold"
+    ? goldRec(record,promote,matchup)
+    : diamondRec(record,demote,matchup,week);
+
+  const wins=(record.match(/W/g)||[]).length;
+  document.getElementById('calc').innerHTML =
+    `<span class="badge ${r.cls}">${r.label}</span>
+     <p>${r.text}</p>
+     <div class="small muted">League: ${league} · Week ${week} · Record before week: ${record||"none"} · Wins banked: ${wins} · Matchup: ${matchup} · Promotion slots: ${promote} · Diamond demotion slots: ${demote}</div>`;
+}
+
+function scoreCalc(){
+  const m=+document.getElementById('members').value||0;
+  const cap=+document.getElementById('cap').value||7.2;
+  const opp=+document.getElementById('opp').value||0;
+  const margin=+document.getElementById('margin').value||0;
+  const daily=m*cap;
+  const weekly=daily*6/1000;
+  const target=opp*(1+margin/100);
+  document.getElementById('dailyfloor').textContent=daily.toFixed(0)+"M";
+  document.getElementById('weekfloor').textContent=weekly.toFixed(2)+"B";
+  document.getElementById('pushtarget').textContent=target.toFixed(2)+"B";
+}
+
+function horizon(){
+  const rows=[
+    ["Sep 7–12","Gold W3","PUSH","Current 2–0 record. Keep the promotion path alive."],
+    ["Sep 14–19","Gold W4","PUSH","If Week 3 is won, finish the promotion run."],
+    ["Sep 21–26","Diamond W1","SCOUT","Save by default; push immediately if the matchup is favorable."],
+    ["Sep 28–Oct 3","Diamond W2","SCOUT","Look for the cheapest first or second win."],
+    ["Oct 5–10","Diamond W3","PRESSURE","0 wins = push hard. 1 win = scout. 2 wins = hard save."],
+    ["Oct 12–17","Diamond W4","DECIDE","0 wins = all-in. 1 win = cutoff-dependent. 2 wins = save."],
+    ["Oct 19–24","Next W1","RESET","New 4-week block. Begin again in save/scout mode."]
+  ];
+  document.getElementById("horizon").innerHTML=rows.map(r=>{
+    const cls=r[2]==="PUSH"?"push":r[2]==="PRESSURE"||r[2]==="DECIDE"?"danger":r[2]==="RESET"?"normal":"save";
+    return `<div class="week"><b>${r[0]}</b><span>${r[1]}</span><span class="badge ${cls}">${r[2]}</span><span class="muted">${r[3]}</span></div>`;
+  }).join("");
+}
+
+horizon(); recalc(); scoreCalc();
+</script>
+</body>
+</html>
